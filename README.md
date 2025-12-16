@@ -18,7 +18,7 @@ Desain UI mengacu pada Figma berikut:
 
 - 🔍 **Search Paket (Read-Only)**
   - Pencarian berdasarkan:
-    - Nama barang
+    - Nama Pemilik
     - Tanggal
     - Kategori
   - Data real-time dari Supabase
@@ -48,21 +48,6 @@ Desain UI mengacu pada Figma berikut:
 
 ---
 
-## 📁 Struktur Proyek (Ringkas)
-
-src/
-├── app/
-│ ├── pages/
-│ │ ├── DashboardPaket.tsx
-│ │ ├── DataPaket.tsx
-│ │ ├── SearchPacket.tsx
-│ │ └── InputPaket.tsx
-│ ├── components/
-│ │ └── DashboardLayout.tsx
-│ └── lib/
-│ └── supabase.ts
----
-
 ## ⚙️ Konfigurasi Supabase
 
 Pastikan file `src/app/lib/supabase.ts` telah terkonfigurasi:
@@ -74,27 +59,28 @@ export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL!,
   import.meta.env.VITE_SUPABASE_ANON_KEY!
 );
+```
 
 Tambahkan file .env:
-
+```
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_anon_key
-
+```
 ▶️ Menjalankan Project
-
 Clone repository:
-
+```
 git clone https://github.com/username/e-package.git
 cd e-package
-
-
+```
 Install dependencies:
+```
 npm install
-
-
+```
 Jalankan development server:
+```
 npm run dev
-
-
+```
 Akses aplikasi di:
+```
 http://localhost:5173
+```
