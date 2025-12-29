@@ -31,23 +31,30 @@ export function InputCRUDPaket() {
     tanggal: toDateInput(new Date())
   });
 
-  /* =========================
-     AUTO GENERATE KODE PAKET
-  ========================== */
-  const generateKodePaket = async (kodeBarang: string) => {
-    const { data } = await supabase
-      .from('pakages')
-      .select('kode')
-      .eq('kode_barang', kodeBarang);
 
-    let lastNumber = 0;
-    data?.forEach(item => {
-      const match = item.kode.match(/-(\d+)$/);
-      if (match) lastNumber = Math.max(lastNumber, Number(match[1]));
-    });
+ const generateKodePaket = async (kategori: string) => {
+  const { data, error } = await supabase
+    .from('pakages')
+    .select('kode')
+    .eq('kategori', kategori)
+    .order('kode', { ascending: false })
+    .limit(1);
 
-    return `${kodeBarang}-${String(lastNumber + 1).padStart(3, '0')}`;
-  };
+  if (error) {
+    console.error(error);
+    return `${kategori}-001`;
+  }
+
+  let lastNumber = 0;
+
+  if (data && data.length > 0) {
+    const match = data[0].kode.match(/-(\d+)$/);
+    if (match) lastNumber = Number(match[1]);
+  }
+
+  return `${kategori}-${String(lastNumber + 1).padStart(3, '0')}`;
+};
+
 
   /* =========================
      HANDLE CHANGE
@@ -101,9 +108,6 @@ export function InputCRUDPaket() {
     fetchData();
   }, [id, isEdit]);
 
-  /* =========================
-     SUBMIT
-  ========================== */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -112,30 +116,49 @@ export function InputCRUDPaket() {
       ...formData,
       created_at: new Date(formData.tanggal)
     };
-    delete (payload as any).tanggal;
+    const { tanggal, ...dataToSubmit } = payload as any;
 
     const { error } = isEdit
-      ? await supabase.from('pakages').update(payload).eq('id', id)
-      : await supabase.from('pakages').insert(payload);
+      ? await supabase.from('pakages').update(dataToSubmit).eq('id', id)
+      : await supabase.from('pakages').insert(dataToSubmit);
 
     if (error) {
-      alert(error.message);
+      alert("Gagal menyimpan: " + error.message);
       setLoading(false);
       return;
     }
 
-    navigate('/dashboard/data');
+
+    if (isEdit) {
+      
+      alert("Data berhasil diperbarui!");
+      navigate('/dashboard/data');
+    } else {
+      alert(`Paket ${formData.kode} berhasil ditambahkan!`);
+      
+      const nextKode = await generateKodePaket(formData.kode_barang);
+      
+      setFormData(prev => ({
+        ...prev,
+        kode: nextKode,
+        nama_barang: '', 
+        pemilik: '',     
+      }));
+      
+      setLoading(false);
+    }
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-3xl">
-        <h1 className="text-3xl mb-4">
-          {isEdit ? 'Edit Paket Barang' : 'Tambah Paket Barang'}
-        </h1>
+  <DashboardLayout>
+    <div className="max-w-5xl mx-auto px-4">
+      <h1 className="text-3xl font-semibold mb-6">
+        {isEdit ? 'Edit Paket Barang' : 'Tambah Paket Barang'}
+      </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="bg-white p-6 rounded-xl border space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white p-6 rounded-xl border shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
             {/* TANGGAL */}
             <div>
@@ -148,6 +171,20 @@ export function InputCRUDPaket() {
                 required
                 className="w-full border px-4 py-2 rounded-lg"
               />
+            </div>
+
+            {/* STATUS */}
+            <div>
+              <label className="text-sm block mb-1">Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full border px-4 py-2 rounded-lg"
+              >
+                <option value="belum_diambil">Belum Diambil</option>
+                <option value="sudah_diambil">Sudah Diambil</option>
+              </select>
             </div>
 
             {/* KODE BARANG */}
@@ -207,52 +244,42 @@ export function InputCRUDPaket() {
             </div>
 
             {/* PEMILIK */}
-            <div>
+            <div className="md:col-span-2">
               <label className="text-sm block mb-1">Pemilik</label>
               <input
                 name="pemilik"
                 value={formData.pemilik}
                 onChange={handleChange}
                 className="w-full border px-4 py-2 rounded-lg"
+                placeholder="Nama pemilik paket"
               />
             </div>
 
-            {/* STATUS */}
-            <div>
-              <label className="text-sm block mb-1">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full border px-4 py-2 rounded-lg"
-              >
-                <option value="belum_diambil">Belum Diambil</option>
-                <option value="sudah_diambil">Sudah Diambil</option>
-              </select>
-            </div>
           </div>
+        </div>
 
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/data')}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg"
-            >
-              <X className="inline w-4 h-4 mr-1" />
-              Batal
-            </button>
+        {/* ACTION BUTTON */}
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/data')}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg"
+          >
+            <X className="inline w-4 h-4 mr-1" />
+            Batal
+          </button>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-blue-900 text-white rounded-lg"
-            >
-              <Save className="inline w-4 h-4 mr-1" />
-              Simpan
-            </button>
-          </div>
-        </form>
-      </div>
-    </DashboardLayout>
-  );
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-2 bg-blue-900 text-white rounded-lg"
+          >
+            <Save className="inline w-4 h-4 mr-1" />
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </DashboardLayout>
+);
 }
