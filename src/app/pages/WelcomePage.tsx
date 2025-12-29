@@ -15,12 +15,27 @@ export function WelcomePage() {
       const { data, error } = await supabase
         .from('pakages')
         .select('*')
-        .order('id', { ascending: false }); 
+        .order('id', { ascending: false });
       if (error) console.error(error);
       else setPakages(data);
     };
     fetchPakages();
   }, []);
+
+  const pakageCounts = pakages.reduce((acc: Record<string, number>, pkg: any) => {
+    const code = pkg.kategori;   // ⬅️ pakai kategori dari DB
+    if (code) {
+      acc[code] = (acc[code] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+
+  const pakageCodes = Array.from(
+    new Set(pakages.map((pkg: any) => pkg.kategori).filter(Boolean))
+  ).sort();
+
+
 
   const features = [
     {
@@ -55,8 +70,8 @@ export function WelcomePage() {
               <span className="text-2xl text-blue-900">E-Package</span>
             </div>
             <nav className="flex items-center space-x-4">
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="px-6 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors"
               >
                 Login
@@ -72,10 +87,10 @@ export function WelcomePage() {
             Layanan Penitipan Paket Mahasiswi UNIDA
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Simpan paket Anda dengan aman, mudah diambil, dan terkelola secara digital. 
+            Simpan paket Anda dengan aman, mudah diambil, dan terkelola secara digital.
             Setiap pengambilan hanya Rp 2.000.
           </p>
-          <Link 
+          <Link
             to="/login"
             className="inline-block px-8 py-4 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors"
           >
@@ -96,16 +111,21 @@ export function WelcomePage() {
             {pakages.length === 0 ? (
               <p className="text-gray-500">Belum ada paket masuk</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-                {pakages.map((pkg: any, idx: number) => (
-                  <div key={idx} className="p-4 border rounded-lg bg-white shadow-sm">
-                    <h4 className="text-blue-900 font-semibold">{pkg.name}</h4>
-                    <p className="text-gray-600 text-sm">Kode: {pkg.code}</p>
-                    <p className="text-gray-600 text-sm">Status: {pkg.status}</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full">
+                {pakageCodes.map((code) => (
+                  <div
+                    key={code}
+                    className="flex flex-col items-center justify-center p-6 border rounded-xl bg-white shadow-sm"
+                  >
+                    <span className="text-3xl font-bold text-blue-900">{code}</span>
+                    <span className="text-gray-600 text-sm mt-2">
+                      {pakageCounts[code] || 0} Paket
+                    </span>
                   </div>
                 ))}
               </div>
             )}
+
           </div>
         </div>
       </section>
@@ -116,10 +136,10 @@ export function WelcomePage() {
             <h2 className="text-4xl text-blue-900 mb-4">Fitur Unggulan</h2>
             <p className="text-xl text-gray-600">Mudah, aman, dan transparan untuk semua paket</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <div 
+              <div
                 key={index}
                 className="p-6 rounded-xl border border-gray-200 hover:border-blue-900 hover:shadow-lg transition-all"
               >
