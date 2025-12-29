@@ -46,7 +46,7 @@ export function LoginPage() {
     if (formData.email === 'admin@unida.ac.id') {
       navigate('/Dashboard');
     } else {
-      navigate('/user-dashboard');
+      navigate('/user-dashboardz');
     }
   };
 

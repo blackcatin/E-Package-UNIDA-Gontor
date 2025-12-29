@@ -34,9 +34,9 @@ export function DashboardPaket() {
     pemasukan: 0
   })
 
-  const fetchPackages = async () => {
+  const fetchPakages = async () => {
     const { data, error } = await supabase
-      .from('packages')
+      .from('pakages')
       .select('*')
       .order('created_at', { ascending: false })
 
@@ -77,14 +77,14 @@ export function DashboardPaket() {
   }
 
   useEffect(() => {
-    fetchPackages()
+    fetchPakages()
 
     const channel = supabase
-      .channel('packages-realtime')
+      .channel('pakages-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'packages' },
-        () => fetchPackages()
+        { event: '*', schema: 'public', table: 'pakages' },
+        () => fetchPakages()
       )
       .subscribe()
 

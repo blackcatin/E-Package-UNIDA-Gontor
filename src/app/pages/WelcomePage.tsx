@@ -8,18 +8,18 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export function WelcomePage() {
-  const [packages, setPackages] = useState<any[]>([]);
+  const [pakages, setPakages] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchPackages = async () => {
+    const fetchPakages = async () => {
       const { data, error } = await supabase
-        .from('packages')
+        .from('pakages')
         .select('*')
         .order('id', { ascending: false }); 
       if (error) console.error(error);
-      else setPackages(data);
+      else setPakages(data);
     };
-    fetchPackages();
+    fetchPakages();
   }, []);
 
   const features = [
@@ -93,11 +93,11 @@ export function WelcomePage() {
             <span className="text-white text-sm ml-4">Daftar Paket</span>
           </div>
           <div className="p-8 bg-gradient-to-br from-blue-50 to-gray-50 min-h-[400px] flex flex-col items-center justify-center">
-            {packages.length === 0 ? (
+            {pakages.length === 0 ? (
               <p className="text-gray-500">Belum ada paket masuk</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-                {packages.map((pkg: any, idx: number) => (
+                {pakages.map((pkg: any, idx: number) => (
                   <div key={idx} className="p-4 border rounded-lg bg-white shadow-sm">
                     <h4 className="text-blue-900 font-semibold">{pkg.name}</h4>
                     <p className="text-gray-600 text-sm">Kode: {pkg.code}</p>
