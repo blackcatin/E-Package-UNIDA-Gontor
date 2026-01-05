@@ -28,7 +28,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return;
 
-    // Ambil username dan role dari tabel profiles
     const { data, error } = await supabase
       .from('profiles')
       .select('username, role')
@@ -45,11 +44,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     fetchProfile();
   }, []);
 
-  // --- LOGIKA FILTER MENU BERDASARKAN ROLE ---
   const isAdmin = role === 'admin';
 
   const menuItems = [
-    // Dashboard Utama hanya untuk Admin
     ...(isAdmin ? [{
       title: 'Dashboard Utama',
       path: '/dashboard',
@@ -61,12 +58,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       title: 'Manajemen Paket',
       isGroup: true,
       children: [
-        // Menu Input & Data hanya untuk Admin
         ...(isAdmin ? [
           { title: 'Input Paket', path: '/dashboard/input', icon: Package },
           { title: 'Data Paket', path: '/dashboard/data', icon: Database },
         ] : []),
-        // Menu Cari Paket bisa untuk SEMUA (Admin & User)
         { title: 'Cari Paket', path: '/dashboard/search', icon: Search }
       ]
     }
@@ -79,11 +74,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* SIDEBAR */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-blue-900 text-white transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          }`}
+        className={`fixed top-0 left-0 z-50 w-64 h-screen bg-blue-900 text-white
+    transform transition-transform duration-300 ease-in-out
+    ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+  `}
       >
+
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between px-6 py-4 border-b border-blue-800">
             <Link to={isAdmin ? "/dashboard" : "/dashboard/search"} className="flex items-center space-x-2">
@@ -108,7 +105,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       )}
                       <ul className="space-y-1 mt-2">
                         {item.children?.map((child, childIndex) => {
-                          // EKSTRAK ICON DI SINI
                           const ChildIcon = child.icon;
                           const isActive = location.pathname === child.path;
                           return (
@@ -127,10 +123,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       </ul>
                     </div>
                   ) : (
-                    // PERBAIKAN UNTUK SINGLE MENU (Dashboard Utama)
                     item.path && item.icon && (
                       (() => {
-                        const MainIcon = item.icon; // Ekstrak ke variabel huruf kapital
+                        const MainIcon = item.icon;
                         return (
                           <Link
                             to={item.path}
@@ -149,7 +144,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </ul>
           </nav>
 
-          {/* USER INFO & LOGOUT */}
           <div className="border-t border-blue-800 px-4 py-4 bg-blue-950/30">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center">
@@ -171,9 +165,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-        <header className="bg-white shadow-sm sticky top-0 z-40">
+        <header className="h-16 fixed top- right-0 left-0 lg:left-64 bg-white shadow-sm z-40">
           <div className="flex items-center justify-between px-4 lg:px-8 py-4">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-gray-600">
               <Menu className="w-6 h-6" />
@@ -196,12 +189,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="pt-20 lg:ml-64 p-4 lg:p-8">
           {children}
         </main>
+
       </div>
 
-      {/* OVERLAY UNTUK MOBILE */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}

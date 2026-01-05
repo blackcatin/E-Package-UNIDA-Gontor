@@ -70,7 +70,7 @@ export function SearchPacket() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="pt-20 space-y-6">
 
         <div>
           <h1 className="text-3xl mb-1">Data Paket Barang</h1>

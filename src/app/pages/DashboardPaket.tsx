@@ -94,8 +94,7 @@ export function DashboardPaket() {
   }, [])
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-
+      <div className="pt-20 space-y-6">
         <div>
           <h1 className="text-3xl">Dashboard Paket</h1>
           <p className="text-gray-600">Ringkasan data penitipan paket</p>

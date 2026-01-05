@@ -123,7 +123,7 @@ export function DataPaket() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="pt-20 space-y-6">
 
         {/* HEADER */}
         <div className="flex justify-between items-center">

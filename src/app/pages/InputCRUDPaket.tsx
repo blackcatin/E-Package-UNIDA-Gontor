@@ -55,10 +55,6 @@ export function InputCRUDPaket() {
   return `${kategori}-${String(lastNumber + 1).padStart(3, '0')}`;
 };
 
-
-  /* =========================
-     HANDLE CHANGE
-  ========================== */
   const handleChange = async (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -79,9 +75,6 @@ export function InputCRUDPaket() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  /* =========================
-     FETCH EDIT DATA
-  ========================== */
   useEffect(() => {
     if (!isEdit) return;
 
@@ -151,7 +144,7 @@ export function InputCRUDPaket() {
 
   return (
   <DashboardLayout>
-    <div className="max-w-5xl mx-auto px-4">
+    <div className="max-w-5xl mx-auto px-4 pt-20 space-y-6">
       <h1 className="text-3xl font-semibold mb-6">
         {isEdit ? 'Edit Paket Barang' : 'Tambah Paket Barang'}
       </h1>
