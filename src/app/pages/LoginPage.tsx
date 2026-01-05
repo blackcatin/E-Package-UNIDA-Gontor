@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Mail, Lock, AlertCircle } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://ulvavmdimaeojgjubqye.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsdmF2bWRpbWFlb2pnanVicXllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4Njc4MzMsImV4cCI6MjA4MTQ0MzgzM30.JfLtOTqDwn6QEyJDLsthLTGDR9a2xZ09mw_E7ObhhwQ';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { BookOpen, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase'; // Gunakan import client yang sudah ada atau biarkan jika lokal
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,6 +18,7 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     const newErrors: Record<string, string> = {};
 
     if (!formData.email) newErrors.email = 'Email wajib diisi';
@@ -29,25 +27,45 @@ export function LoginPage() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setIsLoading(false);
       return;
     }
 
-  
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // 1. Proses Autentikasi Supabase
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: formData.email,
       password: formData.password
     });
 
-    if (error || !data.user) {
+    if (authError || !authData.user) {
       setLoginError('Email atau password salah');
+      setIsLoading(false);
       return;
     }
 
-    if (formData.email === 'admin@unida.ac.id') {
-      navigate('/Dashboard');
-    } else {
-      navigate('/user-dashboardz');
+    // 2. Ambil Role dari tabel profiles berdasarkan ID user yang login
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Error fetching profile:', profileError);
+      setLoginError('Gagal memvalidasi profil pengguna');
+      setIsLoading(false);
+      return;
     }
+
+    // 3. Navigasi Berdasarkan Role
+    if (profile.role === 'admin') {
+      navigate('/dashboard'); // Admin ke Dashboard Utama
+    } else {
+      // User ke Search Paket (Tetap di dalam DashboardLayout tapi menu terbatas)
+      navigate('/dashboard/search'); 
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -57,9 +75,9 @@ export function LoginPage() {
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center space-x-2 mb-6">
               <BookOpen className="w-10 h-10 text-blue-900" />
-              <span className="text-3xl text-blue-900">E-Package</span>
+              <span className="text-3xl text-blue-900 font-bold">E-Package</span>
             </Link>
-            <h2 className="text-3xl text-gray-900 mb-2">Selamat Datang Kembali</h2>
+            <h2 className="text-3xl text-gray-900 mb-2 font-semibold">Selamat Datang Kembali</h2>
             <p className="text-gray-600">Masuk ke akun Anda untuk melanjutkan</p>
           </div>
 
@@ -78,9 +96,10 @@ export function LoginPage() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
+                  disabled={isLoading}
                   className={`block w-full pl-10 pr-3 py-3 border ${
                     errors.email ? 'border-red-500' : 'border-gray-300'
-                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent`}
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all`}
                   placeholder="nama@email.com"
                 />
               </div>
@@ -106,9 +125,10 @@ export function LoginPage() {
                   type="password"
                   value={formData.password}
                   onChange={handleChange}
+                  disabled={isLoading}
                   className={`block w-full pl-10 pr-3 py-3 border ${
                     errors.password ? 'border-red-500' : 'border-gray-300'
-                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent`}
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all`}
                   placeholder="Masukkan password"
                 />
               </div>
@@ -121,22 +141,30 @@ export function LoginPage() {
             </div>
 
             {loginError && (
-              <div className="flex items-center text-sm text-red-600">
-                <AlertCircle className="w-4 h-4 mr-1" />
+              <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center text-sm text-red-600">
+                <AlertCircle className="w-4 h-4 mr-2" />
                 {loginError}
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900 transition-colors"
+              disabled={isLoading}
+              className="w-full py-3 px-4 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-900 transition-all flex items-center justify-center disabled:opacity-70"
             >
-              Masuk
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                'Masuk'
+              )}
             </button>
 
             <p className="text-center text-sm text-gray-600">
               Belum punya akun?{' '}
-              <Link to="/register" className="text-blue-900 hover:text-blue-700">
+              <Link to="/register" className="text-blue-900 font-medium hover:text-blue-700">
                 Daftar sekarang
               </Link>
             </p>
@@ -146,35 +174,23 @@ export function LoginPage() {
 
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-900 to-blue-700 items-center justify-center p-12">
         <div className="max-w-md text-white">
-          <h2 className="text-4xl mb-6">Layanan Penitipan Paket Mahasiswi</h2>
-          <p className="text-xl text-blue-100 mb-8">
-            E-Package membantu mengelola paket yang dititipkan dengan aman, cepat, dan transparan.
+          <h2 className="text-4xl font-bold mb-6 leading-tight">Layanan Penitipan Paket UNIDA Gontor</h2>
+          <p className="text-xl text-blue-100 mb-8 opacity-90">
+            Sistem informasi pengelolaan paket mahasiswi yang aman, cepat, dan transparan bagi civitas akademika.
           </p>
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-3">
-                ✓
+          <div className="space-y-5">
+             {[
+               "Pengecekan paket mandiri oleh mahasiswi",
+               "Keamanan data dengan sistem login terintegrasi",
+               "Notifikasi status paket secara realtime"
+             ].map((text, i) => (
+              <div key={i} className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/30 border border-blue-400 flex items-center justify-center">
+                  <span className="text-blue-200 text-sm font-bold">✓</span>
+                </div>
+                <p className="text-lg text-blue-50">{text}</p>
               </div>
-              <div>
-                <p className="text-lg">Ambil paket dengan kode unik</p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-3">
-                ✓
-              </div>
-              <div>
-                <p className="text-lg">Transaksi Rp 2.000 per pengambilan</p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-3">
-                ✓
-              </div>
-              <div>
-                <p className="text-lg">Dashboard paket realtime</p>
-              </div>
-            </div>
+             ))}
           </div>
         </div>
       </div>
