@@ -3,14 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../components/Dashboard';
 import { Save, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-
-const BARANG_MAP: Record<string, string[]> = {
-  A: ['Buku', 'Dokumen', 'Paket Tipis', 'Jam'],
-  B: ['Baju', 'Hijab', 'Tas', 'Dompet', 'Sandal'],
-  C: ['Barang Kecil', 'Skincare', 'Obat'],
-  D: ['Kardus Sedang', 'Sepatu', 'Dan Kawan Kawan'],
-  E: ['Kardus Besar', 'Paket Rumah', 'Meja Belajar']
-};
+import { useNotification } from '../hooks/useNotification';
 
 const toDateInput = (date: string | Date) =>
   new Date(date).toISOString().split('T')[0];
@@ -21,39 +14,55 @@ export function InputCRUDPaket() {
   const isEdit = !!id;
   const [loading, setLoading] = useState(false);
 
+  const { showNotification, NotificationComponent } = useNotification();
+
+  const [masterData, setMasterData] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     kode: '',
     kode_barang: '',
+    master_kode_kategori_id: '',
     nama_barang: '',
-    kategori: '',
     pemilik: '',
     status: 'belum_diambil',
     tanggal: toDateInput(new Date())
   });
 
+  useEffect(() => {
+    const fetchMaster = async () => {
+      const { data, error } = await supabase
+        .from('master_kode_kategori')
+        .select('id, kode, nama_kode, kategori')
+        .eq('is_active', true)
+        .order('kode');
 
- const generateKodePaket = async (kategori: string) => {
-  const { data, error } = await supabase
-    .from('pakages')
-    .select('kode')
-    .eq('kategori', kategori)
-    .order('kode', { ascending: false })
-    .limit(1);
+      if (error) {
+        showNotification('error', 'Gagal memuat master data');
+        return;
+      }
 
-  if (error) {
-    console.error(error);
-    return `${kategori}-001`;
-  }
+      setMasterData(data ?? []);
+    };
 
-  let lastNumber = 0;
+    fetchMaster();
+  }, []);
 
-  if (data && data.length > 0) {
-    const match = data[0].kode.match(/-(\d+)$/);
-    if (match) lastNumber = Number(match[1]);
-  }
+  const generateKodePaket = async (kode: string) => {
+    const { data } = await supabase
+      .from('pakages')
+      .select('kode')
+      .ilike('kode', `${kode}-%`)
+      .order('kode', { ascending: false })
+      .limit(1);
 
-  return `${kategori}-${String(lastNumber + 1).padStart(3, '0')}`;
-};
+    let lastNumber = 0;
+
+    if (data?.length) {
+      const match = data[0].kode.match(/-(\d+)$/);
+      if (match) lastNumber = Number(match[1]);
+    }
+
+    return `${kode}-${String(lastNumber + 1).padStart(3, '0')}`;
+  };
 
   const handleChange = async (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -66,7 +75,7 @@ export function InputCRUDPaket() {
         ...prev,
         kode_barang: value,
         kode: kodePaket,
-        kategori: value,
+        master_kode_kategori_id: '',
         nama_barang: ''
       }));
       return;
@@ -79,19 +88,22 @@ export function InputCRUDPaket() {
     if (!isEdit) return;
 
     const fetchData = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pakages')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (!data) return;
+      if (error || !data) {
+        showNotification('error', 'Gagal memuat data paket');
+        return;
+      }
 
       setFormData({
         kode: data.kode,
         kode_barang: data.kode_barang,
+        master_kode_kategori_id: data.master_kode_kategori_id,
         nama_barang: data.nama_barang,
-        kategori: data.kategori,
         pemilik: data.pemilik ?? '',
         status: data.status,
         tanggal: toDateInput(data.created_at)
@@ -99,63 +111,89 @@ export function InputCRUDPaket() {
     };
 
     fetchData();
-  }, [id, isEdit]);
+  }, [id]);
+
+  const resetForm = () => {
+    setFormData({
+      kode: '',
+      kode_barang: '',
+      master_kode_kategori_id: '',
+      nama_barang: '',
+      pemilik: '',
+      status: 'belum_diambil',
+      tanggal: toDateInput(new Date())
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const payload = {
-      ...formData,
-      created_at: new Date(formData.tanggal)
-    };
-    const { tanggal, ...dataToSubmit } = payload as any;
+    const master = masterData.find(
+      m => m.id === formData.master_kode_kategori_id
+    );
 
-    const { error } = isEdit
-      ? await supabase.from('pakages').update(dataToSubmit).eq('id', id)
-      : await supabase.from('pakages').insert(dataToSubmit);
-
-    if (error) {
-      alert("Gagal menyimpan: " + error.message);
+    if (!master) {
+      showNotification('error', 'Kategori wajib dipilih');
       setLoading(false);
       return;
     }
 
+    const payload = {
+      kode: formData.kode,
+      kode_barang: formData.kode_barang,
+      kategori: master.kategori,
+      master_kode_kategori_id: master.id,
+      nama_barang: formData.nama_barang,
+      pemilik: formData.pemilik || null,
+      status: formData.status,
+      created_at: new Date(formData.tanggal)
+    };
 
-    if (isEdit) {
-      
-      alert("Data berhasil diperbarui!");
-      navigate('/dashboard/data');
+    const { error } = isEdit
+      ? await supabase.from('pakages').update(payload).eq('id', id)
+      : await supabase.from('pakages').insert(payload);
+
+    setLoading(false);
+
+    if (error) {
+      showNotification('error', error.message);
+      return;
+    }
+
+    showNotification(
+      'success',
+      isEdit ? 'Paket berhasil diperbarui' : 'Paket berhasil ditambahkan'
+    );
+    if (!isEdit) {
+      resetForm();
     } else {
-      alert(`Paket ${formData.kode} berhasil ditambahkan!`);
-      
-      const nextKode = await generateKodePaket(formData.kode_barang);
-      
-      setFormData(prev => ({
-        ...prev,
-        kode: nextKode,
-        nama_barang: '', 
-        pemilik: '',     
-      }));
-      
-      setLoading(false);
+      setTimeout(() => navigate('/dashboard/data'), 800);
     }
   };
 
+  const kodeList = Array.from(
+    new Map(masterData.map(i => [i.kode, i.nama_kode])).entries()
+  );
+
+  const kategoriList = masterData.filter(
+    i => i.kode === formData.kode_barang
+  );
+
   return (
-  <DashboardLayout>
-    <div className="max-w-5xl mx-auto px-4 pt-20 space-y-6">
-      <h1 className="text-3xl font-semibold mb-6">
-        {isEdit ? 'Edit Paket Barang' : 'Tambah Paket Barang'}
-      </h1>
+    <DashboardLayout>
+      {NotificationComponent}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="max-w-5xl mx-auto px-4 pt-20 space-y-6">
+        <h1 className="text-3xl font-semibold">
+          {isEdit ? 'Edit Paket Barang' : 'Tambah Paket Barang'}
+        </h1>
 
-            {/* TANGGAL */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white p-6 rounded-xl border grid grid-cols-1 md:grid-cols-2 gap-5">
+
             <div>
-              <label className="text-sm block mb-1">Tanggal Masuk *</label>
+              <label>Tanggal Masuk *</label>
               <input
                 type="date"
                 name="tanggal"
@@ -166,9 +204,8 @@ export function InputCRUDPaket() {
               />
             </div>
 
-            {/* STATUS */}
             <div>
-              <label className="text-sm block mb-1">Status</label>
+              <label>Status</label>
               <select
                 name="status"
                 value={formData.status}
@@ -180,9 +217,8 @@ export function InputCRUDPaket() {
               </select>
             </div>
 
-            {/* KODE BARANG */}
             <div>
-              <label className="text-sm block mb-1">Kode Barang *</label>
+              <label>Kode Barang *</label>
               <select
                 name="kode_barang"
                 value={formData.kode_barang}
@@ -191,15 +227,16 @@ export function InputCRUDPaket() {
                 className="w-full border px-4 py-2 rounded-lg"
               >
                 <option value="">Pilih Kode</option>
-                {Object.keys(BARANG_MAP).map(kode => (
-                  <option key={kode} value={kode}>{kode}</option>
+                {kodeList.map(([kode, nama]) => (
+                  <option key={kode} value={kode}>
+                    {kode} - {nama}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* KODE PAKET */}
             <div>
-              <label className="text-sm block mb-1">Kode Paket</label>
+              <label>Kode Paket</label>
               <input
                 value={formData.kode}
                 readOnly
@@ -207,72 +244,68 @@ export function InputCRUDPaket() {
               />
             </div>
 
-            {/* NAMA BARANG */}
             <div>
-              <label className="text-sm block mb-1">Nama Barang *</label>
+              <label>Kategori *</label>
               <select
-                name="nama_barang"
-                value={formData.nama_barang}
+                name="master_kode_kategori_id"
+                value={formData.master_kode_kategori_id}
                 onChange={handleChange}
                 required
                 disabled={!formData.kode_barang}
                 className="w-full border px-4 py-2 rounded-lg"
               >
-                <option value="">Pilih Barang</option>
-                {formData.kode_barang &&
-                  BARANG_MAP[formData.kode_barang].map(item => (
-                    <option key={item} value={item}>{item}</option>
-                  ))}
+                <option value="">Pilih Kategori</option>
+                {kategoriList.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.kategori}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* KATEGORI */}
             <div>
-              <label className="text-sm block mb-1">Kategori</label>
+              <label>Nama Barang *</label>
               <input
-                value={formData.kategori}
-                readOnly
-                className="w-full border px-4 py-2 rounded-lg bg-gray-100"
+                name="nama_barang"
+                value={formData.nama_barang}
+                onChange={handleChange}
+                required
+                className="w-full border px-4 py-2 rounded-lg"
               />
             </div>
 
-            {/* PEMILIK */}
             <div className="md:col-span-2">
-              <label className="text-sm block mb-1">Pemilik</label>
+              <label>Pemilik</label>
               <input
                 name="pemilik"
                 value={formData.pemilik}
                 onChange={handleChange}
                 className="w-full border px-4 py-2 rounded-lg"
-                placeholder="Nama pemilik paket"
               />
             </div>
 
           </div>
-        </div>
 
-        {/* ACTION BUTTON */}
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/data')}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg"
-          >
-            <X className="inline w-4 h-4 mr-1" />
-            Batal
-          </button>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/data')}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg"
+            >
+              <X className="inline w-4 h-4 mr-1" /> Batal
+            </button>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2 bg-blue-900 text-white rounded-lg"
-          >
-            <Save className="inline w-4 h-4 mr-1" />
-            Simpan
-          </button>
-        </div>
-      </form>
-    </div>
-  </DashboardLayout>
-);
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-900 text-white rounded-lg disabled:opacity-50"
+            >
+              <Save className="inline w-4 h-4 mr-1" />
+              {loading ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </DashboardLayout>
+  );
 }

@@ -47,12 +47,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isAdmin = role === 'admin';
 
   const menuItems = [
-    ...(isAdmin ? [{
-      title: 'Dashboard Utama',
-      path: '/dashboard',
-      icon: LayoutDashboard,
-      isGroup: false
-    }] : []),
+    ...(isAdmin ? [
+      {
+        title: 'Dashboard Utama',
+        path: '/dashboard',
+        icon: LayoutDashboard,
+        isGroup: false
+      }
+    ] : []),
 
     {
       title: 'Manajemen Paket',
@@ -64,8 +66,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         ] : []),
         { title: 'Cari Paket', path: '/dashboard/search', icon: Search }
       ]
-    }
+    },
+
+    // 🔽 MASTER DATA (ADMIN ONLY)
+    ...(isAdmin ? [
+      {
+        title: 'Master Data',
+        isGroup: true,
+        children: [
+          {
+            title: 'Kode & Kategori Paket',
+            path: '/dashboard/master-kode-kategori',
+            icon: Database
+          }
+        ]
+      }
+    ] : [])
   ];
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

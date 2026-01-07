@@ -23,7 +23,7 @@ export function WelcomePage() {
   }, []);
 
   const pakageCounts = pakages.reduce((acc: Record<string, number>, pkg: any) => {
-    const code = pkg.kategori;   // ⬅️ pakai kategori dari DB
+    const code = pkg.kategori;   
     if (code) {
       acc[code] = (acc[code] || 0) + 1;
     }
@@ -154,7 +154,6 @@ export function WelcomePage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-blue-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

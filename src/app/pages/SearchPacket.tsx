@@ -50,9 +50,11 @@ export function SearchPacket() {
 
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      const matchNama =
+      const matchPemilik =
         !search ||
-        item.nama_barang.toLowerCase().includes(search.toLowerCase())
+        (item.pemilik &&
+          item.pemilik.toLowerCase().includes(search.toLowerCase()))
+
 
       const matchKategori =
         !kategoriFilter || item.kategori === kategoriFilter
@@ -60,7 +62,7 @@ export function SearchPacket() {
       const matchTanggal =
         !dateFilter || item.created_at.startsWith(dateFilter)
 
-      return matchNama && matchKategori && matchTanggal
+      return matchPemilik && matchKategori && matchTanggal
     })
   }, [data, search, kategoriFilter, dateFilter])
 
@@ -95,7 +97,7 @@ export function SearchPacket() {
           </div>
 
           <div>
-            <label className="text-sm mb-1 block">Nama Barang</label>
+            <label className="text-sm mb-1 block">Nama Pemilik</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -104,7 +106,7 @@ export function SearchPacket() {
                   setSearch(e.target.value)
                   setCurrentPage(1)
                 }}
-                placeholder="Cari nama barang"
+                placeholder="Cari nama pemilik"
                 className="pl-10 w-full border px-4 py-2 rounded-lg"
               />
             </div>
@@ -171,8 +173,8 @@ export function SearchPacket() {
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${item.status === 'sudah_diambil'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-yellow-100 text-yellow-700'
                           }`}
                       >
                         {item.status === 'sudah_diambil'
